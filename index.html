@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cipta — Asisten AI Pembangun Web</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --bg:#0f1117;
+    --bg-elevated:#161923;
+    --surface:#1c2029;
+    --surface-2:#252b38;
+    --border:#2a2f3d;
+    --text:#edeff4;
+    --text-dim:#8d94a8;
+    --text-faint:#5c6378;
+    --accent:#e8a33d;
+    --accent-2:#f0b95c;
+    --accent-soft:rgba(232,163,61,0.14);
+    --mint:#5fd9c3;
+    --mint-soft:rgba(95,217,195,0.12);
+    --danger:#e8615f;
+    --font-ui:'Inter',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-ui);
+    -webkit-font-smoothing:antialiased;
+  }
+  #shell{
+    max-width:760px;
+    margin:0 auto;
+    height:100vh;
+    background:var(--bg);
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* ---------- Login screen ---------- */
+  #login-screen{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:32px;
+    background:
+      radial-gradient(560px 420px at 50% 18%, rgba(232,163,61,0.14), transparent 65%),
+      var(--bg);
+    text-align:center;
+    z-index:20;
+  }
+  .login-logo-wrap{
+    position:relative;
+    width:84px;height:84px;
+    margin-bottom:26px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .login-logo-wrap::before{
+    content:'';
+    position:absolute;inset:-14px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(232,163,61,0.35), transparent 70%);
+    animation:pulse-glow 3.2s ease-in-out infinite;
+  }
+  @keyframes pulse-glow{
+    0%,100%{opacity:.5;transform:scale(0.92);}
+    50%{opacity:1;transform:scale(1.06);}
+  }
+  .login-logo-wrap svg{position:relative;z-index:1;}
+  #login-screen h1{
+    font-size:1.7rem;
+    font-weight:800;
+    letter-spacing:-0.02em;
+    margin:0 0 8px;
+  }
+  #login-screen p{
+    color:var(--text-dim);
+    font-size:0.94rem;
+    max-width:320px;
+    line-height:1.55;
+    margin:0 0 32px;
+  }
+  #google-signin-btn{
+    min-height:44px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .login-fineprint{
+    margin-top:22px;
+    font-size:0.76rem;
+    color:var(--text-faint);
+    max-width:280px;
+    line-height:1.5;
+  }
+
+  /* ---------- App shell ---------- */
+  #app{display:none;flex-direction:column;height:100%;}
+  #app.visible{display:flex;}
+
+  header{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:13px 16px;
+    border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .logo-mark{width:30px;height:30px;flex-shrink:0;}
+  .brand{flex:1;min-width:0;}
+  .brand h1{margin:0;font-size:1.02rem;font-weight:700;letter-spacing:-0.01em;}
+  .brand p{margin:1px 0 0;font-size:0.76rem;color:var(--text-dim);}
+
+  .icon-btn{
+    width:36px;height:36px;border-radius:10px;
+    border:1px solid var(--border);background:var(--surface);color:var(--text-dim);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    transition:background .15s,color .15s,border-color .15s;flex-shrink:0;
+  }
+  .icon-btn:hover{background:var(--surface-2);color:var(--text);}
+  .icon-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .user-menu{position:relative;flex-shrink:0;}
+  .user-chip{
+    display:flex;align-items:center;gap:8px;
+    padding:5px 10px 5px 5px;
+    border-radius:20px;border:1px solid var(--border);background:var(--surface);
+    cursor:pointer;transition:background .15s;
+  }
+  .user-chip:hover{background:var(--surface-2);}
+  .user-chip img{width:26px;height:26px;border-radius:50%;display:block;}
+  .user-chip span{font-size:0.82rem;font-weight:500;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .user-dropdown{
+    position:absolute;top:calc(100% + 8px);right:0;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+    padding:6px;min-width:170px;display:none;
+    box-shadow:0 12px 28px rgba(0,0,0,0.35);
+    z-index:10;
+  }
+  .user-dropdown.open{display:block;}
+  .user-dropdown .who{padding:8px 10px;border-bottom:1px solid var(--border);margin-bottom:4px;}
+  .user-dropdown .who strong{display:block;font-size:0.84rem;}
+  .user-dropdown .who small{color:var(--text-dim);font-size:0.74rem;}
+  .user-dropdown button{
+    width:100%;text-align:left;padding:8px 10px;border-radius:6px;border:none;background:transparent;
+    color:var(--danger);font-family:var(--font-ui);font-size:0.84rem;cursor:pointer;
+  }
+  .user-dropdown button:hover{background:rgba(232,97,95,0.1);}
+
+  .tabs{display:flex;gap:4px;padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .tab{
+    position:relative;border:none;background:transparent;color:var(--text-dim);
+    font-family:var(--font-ui);font-size:0.86rem;font-weight:500;
+    padding:8px 14px;border-radius:8px;cursor:pointer;transition:background .15s,color .15s;
+  }
+  .tab:hover{color:var(--text);}
+  .tab.active{background:var(--accent-soft);color:var(--accent);}
+  .tab:disabled{color:var(--text-faint);cursor:not-allowed;}
+  .tab .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--mint);margin-left:6px;vertical-align:middle;}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .panel{flex:1;min-height:0;display:none;flex-direction:column;}
+  .panel.active{display:flex;}
+
+  #chat-scroll{flex:1;overflow-y:auto;padding:20px 18px 8px;display:flex;flex-direction:column;gap:16px;}
+  .empty-state{margin:auto 0;text-align:center;color:var(--text-dim);padding:20px;}
+  .empty-state .logo-mark{width:44px;height:44px;margin:0 auto 14px;}
+  .empty-state h2{color:var(--text);font-size:1.05rem;margin:0 0 6px;font-weight:600;}
+  .empty-state p{font-size:0.88rem;margin:0;line-height:1.5;}
+
+  .msg{display:flex;max-width:88%;}
+  .msg.user{align-self:flex-end;}
+  .msg.assistant{align-self:flex-start;}
+  .bubble{padding:10px 14px;border-radius:14px;font-size:0.92rem;line-height:1.55;}
+  .msg.user .bubble{background:var(--accent);color:#1b1406;border-bottom-right-radius:4px;}
+  .msg.assistant .bubble{background:transparent;border-left:2px solid var(--surface-2);padding-left:14px;border-radius:0;color:var(--text);width:100%;}
+  .bubble p{margin:0 0 10px;}
+  .bubble p:last-child{margin-bottom:0;}
+
+  .code-block{margin:10px 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-elevated);transition:border-color .15s,background .15s;}
+  .code-block.runnable{cursor:pointer;}
+  .code-block.runnable:hover{border-color:rgba(95,217,195,0.5);background:#161c22;}
+  .code-block-header{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--surface);border-bottom:1px solid var(--border);}
+  .code-lang-group{display:flex;align-items:center;gap:8px;}
+  .code-lang{font-family:var(--font-mono);font-size:0.72rem;color:var(--mint);text-transform:lowercase;}
+  .run-hint{display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--text-faint);}
+  .run-hint svg{width:12px;height:12px;}
+  .code-actions{display:flex;gap:6px;}
+  .code-actions button{
+    font-family:var(--font-ui);font-size:0.74rem;font-weight:500;padding:4px 9px;border-radius:6px;
+    border:1px solid var(--border);background:var(--surface-2);color:var(--text-dim);cursor:pointer;
+    transition:color .15s,border-color .15s;position:relative;z-index:2;
+  }
+  .code-actions button:hover{color:var(--text);}
+  .code-actions button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .code-block pre{margin:0;padding:12px 14px;overflow-x:auto;max-height:220px;}
+  .code-block code{font-family:var(--font-mono);font-size:0.78rem;line-height:1.6;color:#d3d7e0;white-space:pre;}
+
+  .typing{display:flex;gap:4px;padding:6px 0 6px 14px;}
+  .typing span{width:6px;height:6px;border-radius:50%;background:var(--text-faint);animation:bounce 1.2s infinite ease-in-out;}
+  .typing span:nth-child(2){animation-delay:.15s;}
+  .typing span:nth-child(3){animation-delay:.3s;}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.5;}30%{transform:translateY(-4px);opacity:1;}}
+
+  .error-line{color:var(--danger);font-size:0.85rem;display:flex;align-items:center;gap:10px;padding-left:14px;}
+  .error-line button{
+    font-family:var(--font-ui);font-size:0.8rem;font-weight:600;color:var(--danger);background:transparent;
+    border:1px solid rgba(232,97,95,0.4);padding:4px 10px;border-radius:6px;cursor:pointer;
+  }
+
+  .composer{display:flex;align-items:flex-end;gap:10px;padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg);}
+  #composer-input{
+    flex:1;resize:none;max-height:140px;min-height:22px;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;color:var(--text);font-family:var(--font-ui);font-size:0.92rem;padding:10px 14px;line-height:1.4;
+  }
+  #composer-input:focus{outline:none;border-color:var(--accent);}
+  #composer-input::placeholder{color:var(--text-faint);}
+  #send-btn{
+    width:40px;height:40px;flex-shrink:0;border-radius:12px;border:none;background:var(--accent);color:#1b1406;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .15s,transform .1s;
+  }
+  #send-btn:disabled{opacity:.4;cursor:not-allowed;}
+  #send-btn:active:not(:disabled){transform:scale(0.94);}
+  #send-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .preview-subtabs{display:flex;gap:4px;padding:10px 14px 0;flex-shrink:0;}
+  .subtab{border:none;background:transparent;color:var(--text-dim);font-family:var(--font-ui);font-size:0.82rem;font-weight:500;padding:6px 12px;border-radius:7px 7px 0 0;cursor:pointer;}
+  .subtab.active{background:var(--surface);color:var(--text);}
+  .preview-body{flex:1;min-height:0;background:var(--surface);display:flex;flex-direction:column;}
+  .preview-empty{margin:auto;text-align:center;color:var(--text-dim);font-size:0.88rem;padding:30px;max-width:280px;}
+  #preview-iframe{flex:1;width:100%;border:none;background:#fff;display:none;}
+  #preview-code{flex:1;display:none;overflow:auto;margin:0;padding:16px;}
+  #preview-code code{font-family:var(--font-mono);font-size:0.78rem;line-height:1.6;color:#d3d7e0;white-space:pre;}
+  .preview-toolbar{display:flex;justify-content:flex-end;padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:4px;}
+
+  @media(max-width:480px){
+    #shell{border-left:none;border-right:none;}
+    .msg{max-width:94%;}
+  }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <div id="login-screen">
+    <div class="login-logo-wrap">
+      <svg width="52" height="52" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 3 L23.2 16.8 L37 20 L23.2 23.2 L20 37 L16.8 23.2 L3 20 L16.8 16.8 Z" fill="#e8a33d"/>
+      </svg>
+    </div>
+    <h1>Cipta</h1>
+    <p>Masuk dengan akun Google untuk mulai ngobrol dan membangun web bersama Cipta.</p>
+    <div id="google-signin-btn"></div>
+    <div class="login-fineprint" id="login-fineprint"></div>
+  </div>
+
+  <div id="app">
+    <header>
+      <svg class="logo-mark" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 3 L23.2 16.8 L37 20 L23.2 23.2 L20 37 L16.8 23.2 L3 20 L16.8 16.8 Z" fill="#e8a33d"/>
+      </svg>
+      <div class="brand">
+        <h1>Cipta</h1>
+        <p>Ngobrol &amp; membangun web</p>
+      </div>
+      <button class="icon-btn" id="new-chat-btn" aria-label="Obrolan baru" title="Obrolan baru">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <div class="user-menu" id="user-menu">
+        <div class="user-chip" id="user-chip">
+          <img id="user-avatar" src="" alt="">
+          <span id="user-name-label"></span>
+        </div>
+        <div class="user-dropdown" id="user-dropdown">
+          <div class="who"><strong id="dd-name"></strong><small id="dd-email"></small></div>
+          <button id="logout-btn">Keluar</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-chat" data-panel="chat">Obrolan</button>
+      <button class="tab" id="tab-preview" data-panel="preview" disabled>Pratinjau &amp; Kode</button>
+    </div>
+
+    <section class="panel active" id="panel-chat">
+      <div id="chat-scroll">
+        <div class="empty-state" id="empty-state">
+          <svg class="logo-mark" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 3 L23.2 16.8 L37 20 L23.2 23.2 L20 37 L16.8 23.2 L3 20 L16.8 16.8 Z" fill="#e8a33d" opacity="0.85"/>
+          </svg>
+          <h2 id="greeting">Mau bikin apa hari ini?</h2>
+          <p>Ceritakan situs yang kamu bayangkan. Setiap balasan berisi kode HTML tinggal diklik untuk langsung melihat hasilnya.</p>
+        </div>
+      </div>
+      <div class="composer">
+        <textarea id="composer-input" rows="1" placeholder="Tulis pesan..."></textarea>
+        <button id="send-btn" aria-label="Kirim">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9Z"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-preview">
+      <div class="preview-subtabs">
+        <button class="subtab active" data-sub="live">Pratinjau</button>
+        <button class="subtab" data-sub="code">Kode</button>
+      </div>
+      <div class="preview-body">
+        <div class="preview-toolbar">
+          <div class="code-actions"><button id="copy-preview-code">Salin kode</button></div>
+        </div>
+        <div class="preview-empty" id="preview-empty">Belum ada kode untuk ditampilkan. Minta Cipta membuatkan situs, lalu klik blok kodenya di obrolan.</div>
+        <iframe id="preview-iframe" title="Pratinjau situs" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+        <pre id="preview-code"><code id="preview-code-content"></code></pre>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   KONFIGURASI GOOGLE SIGN-IN
+   Ganti nilai di bawah ini dengan Client ID dari Google Cloud
+   Console (APIs & Services > Credentials > OAuth Client ID,
+   tipe "Web application"). Tambahkan domain tempat file ini
+   dibuka ke daftar "Authorized JavaScript origins".
+   ========================================================= */
+const GOOGLE_CLIENT_ID = "993561306231-n8bu2ard235jujespvhtu69uq78ku8qs.apps.googleusercontent.com";
+
+const SYSTEM_PROMPT = `Kamu adalah Cipta, asisten AI yang ramah, jelas, dan cakap membangun website serta aplikasi front-end sederhana.
+Jika pengguna meminta dibuatkan situs, halaman, komponen, atau kode visual apa pun, tulis SATU blok kode lengkap berbahasa "html" yang sudah menyertakan <style> dan <script> di dalamnya sehingga bisa langsung dijalankan sebagai pratinjau mandiri. Jangan memecah HTML, CSS, dan JS ke blok kode terpisah.
+Beri penjelasan singkat sebelum atau sesudah kode, jangan bertele-tele.
+Untuk pertanyaan atau obrolan biasa yang tidak butuh kode, jawab natural seperti asisten yang cerdas dan hangat.
+Gunakan Bahasa Indonesia, kecuali pengguna menulis dalam bahasa lain.`;
+
+let messages = [];
+let isLoading = false;
+let currentPreviewHtml = null;
+let currentUser = null;
+
+const loginScreen = document.getElementById('login-screen');
+const appEl = document.getElementById('app');
+const chatScroll = document.getElementById('chat-scroll');
+const emptyState = document.getElementById('empty-state');
+const greeting = document.getElementById('greeting');
+const input = document.getElementById('composer-input');
+const sendBtn = document.getElementById('send-btn');
+const newChatBtn = document.getElementById('new-chat-btn');
+const tabChat = document.getElementById('tab-chat');
+const tabPreview = document.getElementById('tab-preview');
+const panelChat = document.getElementById('panel-chat');
+const panelPreview = document.getElementById('panel-preview');
+const previewIframe = document.getElementById('preview-iframe');
+const previewCode = document.getElementById('preview-code');
+const previewCodeContent = document.getElementById('preview-code-content');
+const previewEmpty = document.getElementById('preview-empty');
+const copyPreviewBtn = document.getElementById('copy-preview-code');
+const userMenu = document.getElementById('user-menu');
+const userChip = document.getElementById('user-chip');
+const userDropdown = document.getElementById('user-dropdown');
+const userAvatar = document.getElementById('user-avatar');
+const userNameLabel = document.getElementById('user-name-label');
+const ddName = document.getElementById('dd-name');
+const ddEmail = document.getElementById('dd-email');
+const logoutBtn = document.getElementById('logout-btn');
+const loginFineprint = document.getElementById('login-fineprint');
+
+/* ---------- Google Sign-In ---------- */
+function decodeJwt(token){
+  const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+  const json = decodeURIComponent(atob(base64).split('').map(c =>
+    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+  return JSON.parse(json);
+}
+
+function handleCredentialResponse(response){
+  const payload = decodeJwt(response.credential);
+  currentUser = { name: payload.name, email: payload.email, picture: payload.picture };
+  userAvatar.src = currentUser.picture;
+  userAvatar.alt = currentUser.name;
+  userNameLabel.textContent = currentUser.name.split(' ')[0];
+  ddName.textContent = currentUser.name;
+  ddEmail.textContent = currentUser.email;
+  greeting.textContent = 'Mau bikin apa hari ini, ' + currentUser.name.split(' ')[0] + '?';
+  loginScreen.style.display = 'none';
+  appEl.classList.add('visible');
+}
+
+window.addEventListener('load', () => {
+  if(GOOGLE_CLIENT_ID.indexOf('GANTI_DENGAN') === 0){
+    loginFineprint.textContent = 'Client ID Google belum diatur. Buka file ini di editor dan isi GOOGLE_CLIENT_ID agar tombol masuk aktif.';
+    return;
+  }
+  if(window.google && google.accounts && google.accounts.id){
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse });
+    google.accounts.id.renderButton(document.getElementById('google-signin-btn'), {
+      theme: 'filled_black', size: 'large', shape: 'pill', text: 'continue_with', width: 280
+    });
+  } else {
+    loginFineprint.textContent = 'Gagal memuat layanan masuk Google. Periksa koneksi internet lalu muat ulang.';
+  }
+});
+
+logoutBtn.onclick = () => {
+  userDropdown.classList.remove('open');
+  currentUser = null;
+  appEl.classList.remove('visible');
+  loginScreen.style.display = 'flex';
+  if(window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
+};
+
+userChip.onclick = () => userDropdown.classList.toggle('open');
+document.addEventListener('click', (e) => {
+  if(!userMenu.contains(e.target)) userDropdown.classList.remove('open');
+});
+
+/* ---------- Chat rendering ---------- */
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function parseSegments(text){
+  const segments = [];
+  const re = /```(\w+)?\n([\s\S]*?)```/g;
+  let last = 0, m;
+  while((m = re.exec(text)) !== null){
+    if(m.index > last) segments.push({type:'text', content:text.slice(last, m.index)});
+    segments.push({type:'code', lang:(m[1]||'kode').toLowerCase(), content:m[2].replace(/\n$/,'')});
+    last = re.lastIndex;
+  }
+  if(last < text.length) segments.push({type:'text', content:text.slice(last)});
+  return segments;
+}
+
+function renderTextBlock(container, text){
+  const paragraphs = text.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean);
+  paragraphs.forEach(p=>{
+    const el = document.createElement('p');
+    el.innerHTML = escapeHtml(p).replace(/\n/g,'<br>');
+    container.appendChild(el);
+  });
+}
+
+function renderCodeBlock(container, lang, code){
+  const wrap = document.createElement('div');
+  const isRunnable = lang === 'html';
+  wrap.className = 'code-block' + (isRunnable ? ' runnable' : '');
+
+  const head = document.createElement('div');
+  head.className = 'code-block-header';
+
+  const langGroup = document.createElement('div');
+  langGroup.className = 'code-lang-group';
+  const langLabel = document.createElement('span');
+  langLabel.className = 'code-lang';
+  langLabel.textContent = lang;
+  langGroup.appendChild(langLabel);
+  if(isRunnable){
+    const hint = document.createElement('span');
+    hint.className = 'run-hint';
+    hint.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Klik untuk pratinjau';
+    langGroup.appendChild(hint);
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'code-actions';
+  const copyBtn = document.createElement('button');
+  copyBtn.textContent = 'Salin';
+  copyBtn.onclick = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(code);
+    copyBtn.textContent = 'Tersalin';
+    setTimeout(()=>copyBtn.textContent='Salin', 1400);
+  };
+  actions.appendChild(copyBtn);
+
+  head.appendChild(langGroup);
+  head.appendChild(actions);
+
+  const pre = document.createElement('pre');
+  const codeEl = document.createElement('code');
+  codeEl.textContent = code;
+  pre.appendChild(codeEl);
+
+  wrap.appendChild(head);
+  wrap.appendChild(pre);
+
+  if(isRunnable){
+    wrap.onclick = () => setPreview(code, true);
+  }
+
+  container.appendChild(wrap);
+}
+
+function addMessageBubble(role, text){
+  emptyState.style.display = 'none';
+  const msgEl = document.createElement('div');
+  msgEl.className = 'msg ' + role;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+
+  if(role === 'user'){
+    bubble.innerHTML = escapeHtml(text).replace(/\n/g,'<br>');
+  } else {
+    const segments = parseSegments(text);
+    segments.forEach(seg=>{
+      if(seg.type === 'text'){
+        if(seg.content.trim()) renderTextBlock(bubble, seg.content);
+      } else {
+        renderCodeBlock(bubble, seg.lang, seg.content);
+      }
+    });
+    const htmlBlocks = segments.filter(s=>s.type==='code' && s.lang==='html');
+    if(htmlBlocks.length) setPreview(htmlBlocks[htmlBlocks.length-1].content, false);
+  }
+
+  msgEl.appendChild(bubble);
+  chatScroll.appendChild(msgEl);
+  chatScroll.scrollTop = chatScroll.scrollHeight;
+}
+
+function addTypingIndicator(){
+  const msgEl = document.createElement('div');
+  msgEl.className = 'msg assistant';
+  msgEl.id = 'typing-indicator';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  msgEl.appendChild(bubble);
+  chatScroll.appendChild(msgEl);
+  chatScroll.scrollTop = chatScroll.scrollHeight;
+}
+function removeTypingIndicator(){
+  const el = document.getElementById('typing-indicator');
+  if(el) el.remove();
+}
+
+function addErrorLine(retryFn){
+  const msgEl = document.createElement('div');
+  msgEl.className = 'msg assistant';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = '<div class="error-line">Gagal terhubung. <button id="retry-btn">Coba lagi</button></div>';
+  msgEl.appendChild(bubble);
+  chatScroll.appendChild(msgEl);
+  chatScroll.scrollTop = chatScroll.scrollHeight;
+  document.getElementById('retry-btn').onclick = () => { msgEl.remove(); retryFn(); };
+}
+
+function setPreview(html, switchTab){
+  currentPreviewHtml = html;
+  previewIframe.srcdoc = html;
+  previewCodeContent.textContent = html;
+  previewEmpty.style.display = 'none';
+  previewIframe.style.display = document.querySelector('.subtab[data-sub="live"]').classList.contains('active') ? 'block' : 'none';
+  previewCode.style.display = document.querySelector('.subtab[data-sub="code"]').classList.contains('active') ? 'block' : 'none';
+  tabPreview.disabled = false;
+  if(!tabPreview.querySelector('.dot')){
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    tabPreview.appendChild(dot);
+  }
+  if(switchTab) activateTab('preview');
+}
+
+function activateTab(name){
+  tabChat.classList.toggle('active', name === 'chat');
+  tabPreview.classList.toggle('active', name === 'preview');
+  panelChat.classList.toggle('active', name === 'chat');
+  panelPreview.classList.toggle('active', name === 'preview');
+  if(name === 'preview' && tabPreview.querySelector('.dot')){
+    tabPreview.querySelector('.dot').remove();
+  }
+}
+tabChat.onclick = () => activateTab('chat');
+tabPreview.onclick = () => { if(!tabPreview.disabled) activateTab('preview'); };
+
+document.querySelectorAll('.subtab').forEach(btn=>{
+  btn.onclick = () => {
+    document.querySelectorAll('.subtab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const sub = btn.dataset.sub;
+    previewIframe.style.display = (sub === 'live' && currentPreviewHtml) ? 'block' : 'none';
+    previewCode.style.display = (sub === 'code' && currentPreviewHtml) ? 'block' : 'none';
+  };
+});
+
+copyPreviewBtn.onclick = () => {
+  if(!currentPreviewHtml) return;
+  navigator.clipboard.writeText(currentPreviewHtml);
+  copyPreviewBtn.textContent = 'Tersalin';
+  setTimeout(()=>copyPreviewBtn.textContent='Salin kode', 1400);
+};
+
+async function callClaude(history){
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      system: SYSTEM_PROMPT,
+      messages: history.map(m => ({ role: m.role, content: m.content }))
+    })
+  });
+  if(!response.ok) throw new Error('Request failed');
+  const data = await response.json();
+  if(data.error) throw new Error(data.error.message || 'API error');
+  return data.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+}
+
+async function sendMessage(){
+  const text = input.value.trim();
+  if(!text || isLoading) return;
+
+  messages.push({role:'user', content:text});
+  addMessageBubble('user', text);
+  input.value = '';
+  input.style.height = 'auto';
+  isLoading = true;
+  sendBtn.disabled = true;
+  addTypingIndicator();
+
+  try{
+    const reply = await callClaude(messages);
+    removeTypingIndicator();
+    messages.push({role:'assistant', content:reply});
+    addMessageBubble('assistant', reply);
+  }catch(err){
+    removeTypingIndicator();
+    addErrorLine(() => {
+      isLoading = false;
+      sendBtn.disabled = false;
+      messages.pop();
+      input.value = text;
+      sendMessage();
+    });
+  }finally{
+    isLoading = false;
+    sendBtn.disabled = false;
+  }
+}
+
+sendBtn.onclick = sendMessage;
+input.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    sendMessage();
+  }
+});
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+});
+
+newChatBtn.onclick = () => {
+  messages = [];
+  currentPreviewHtml = null;
+  chatScroll.innerHTML = '';
+  chatScroll.appendChild(emptyState);
+  emptyState.style.display = 'block';
+  previewIframe.srcdoc = '';
+  previewIframe.style.display = 'none';
+  previewCode.style.display = 'none';
+  previewEmpty.style.display = 'block';
+  tabPreview.disabled = true;
+  if(tabPreview.querySelector('.dot')) tabPreview.querySelector('.dot').remove();
+  activateTab('chat');
+};
+</script>
+</body>
+</html>
